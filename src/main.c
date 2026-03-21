@@ -1,5 +1,5 @@
 
-#include "../hal/systick.h"
+#include "systick.h"
 
 #define UART0_BASE   0x40004000
 #define UART_DATA    (*(volatile unsigned int *)(UART0_BASE + 0x00))

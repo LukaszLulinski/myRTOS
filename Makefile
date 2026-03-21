@@ -1,10 +1,12 @@
 
 CC      = arm-none-eabi-gcc
-CFLAGS  = -mcpu=cortex-m4 -mthumb -nostdlib -ffreestanding -O0 -g
+CFLAGS  = -mcpu=cortex-m4 -mthumb -nostdlib -ffreestanding -O0 -g \
+		  -I./hal \
+		  -I./kernel
 LDFLAGS = -T linker.ld -nostdlib -Wl,-Map=out/myRTOS.map
 
 TARGET  = out/myRTOS.elf
-SRCS    = src/main.c src/startup.c hal/systick.c
+SRCS    = src/main.c src/startup.c hal/systick.c kernel/task.c
 
 all: $(TARGET)
 
