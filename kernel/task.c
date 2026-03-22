@@ -12,20 +12,23 @@
 
 /*————————————————————————————————————————————————————————————————————————————————————*/
 /* Defines                                                                            */
-#define MAX_TASK    (3)
+#define MAX_TASKS       (3)
 #define MAX_STACK_SIZE  (100)
 
 /*————————————————————————————————————————————————————————————————————————————————————*/
 /* Type definitions                                                                   */
-static uint32_t tasks_counter;
-static uint32_t stacks[MAX_TASK][MAX_STACK_SIZE];
-task_control_block_t tcb_pool[MAX_TASK];
 
 /*————————————————————————————————————————————————————————————————————————————————————*/
 /* Static global const                                                                */
 
 /*————————————————————————————————————————————————————————————————————————————————————*/
 /* Static global variables                                                            */
+static uint32_t tasks_counter;
+static uint32_t stacks[MAX_TASKS][MAX_STACK_SIZE];
+static task_control_block_t tcb_pool[MAX_TASKS];
+
+/*————————————————————————————————————————————————————————————————————————————————————*/
+/* Global variables                                                                   */
 
 /*————————————————————————————————————————————————————————————————————————————————————*/
 /* Static functions definitions                                                       */
@@ -34,7 +37,7 @@ task_control_block_t tcb_pool[MAX_TASK];
 /* Global functions                                                                   */
 void task_create(task_func_t task_function, uint32_t priority, uint32_t stack_size)
 {
-    if (MAX_TASK > tasks_counter)
+    if (MAX_TASKS > tasks_counter)
     {
         uint32_t st_size = (MAX_STACK_SIZE >= stack_size) ? stack_size : MAX_STACK_SIZE;
         task_control_block_t* tcb = &tcb_pool[tasks_counter];
@@ -62,6 +65,11 @@ void task_create(task_func_t task_function, uint32_t priority, uint32_t stack_si
 uint32_t task_get_tasks_counter(void)
 {
     return tasks_counter;
+}
+
+task_control_block_t* task_get_tcb(uint32_t index)
+{
+    return &tcb_pool[index];
 }
 
 /*————————————————————————————————————————————————————————————————————————————————————*/

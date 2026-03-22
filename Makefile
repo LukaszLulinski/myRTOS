@@ -6,7 +6,7 @@ CFLAGS  = -mcpu=cortex-m4 -mthumb -nostdlib -ffreestanding -O0 -g \
 LDFLAGS = -T linker.ld -nostdlib -Wl,-Map=out/myRTOS.map
 
 TARGET  = out/myRTOS.elf
-SRCS    = src/main.c src/startup.c hal/systick.c kernel/task.c
+SRCS    = src/main.c src/startup.c hal/systick.c kernel/task.c kernel/scheduler.c
 
 all: $(TARGET)
 

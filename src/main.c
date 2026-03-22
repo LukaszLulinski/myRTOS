@@ -27,6 +27,9 @@
 /* Static global variables                                                            */
 
 /*————————————————————————————————————————————————————————————————————————————————————*/
+/* Global variables                                                                   */
+
+/*————————————————————————————————————————————————————————————————————————————————————*/
 /* Static functions definitions                                                       */
 static void uart_init(void);
 static void uart_print(const char *msg);

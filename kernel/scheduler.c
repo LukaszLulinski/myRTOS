@@ -1,23 +1,18 @@
 /*------------------------------------------------------------------------------------*/
 /*!
- * \file  systick.c 
- * \brief Handling SysTick
+ * \file  scheduler.c 
+ * \brief Scheduling tasks
  */
 /*------------------------------------------------------------------------------------*/
 
 /*————————————————————————————————————————————————————————————————————————————————————*/
 /* Includes                                                                           */
-#include "systick.h"
+#include <stddef.h>
+#include "scheduler.h"
+#include "task.h"
 
 /*————————————————————————————————————————————————————————————————————————————————————*/
 /* Defines                                                                            */
-/* Registers SysTick */
-#define SYST_CSR  (*(volatile uint32_t *)0xE000E010) // control and status
-#define SYST_RVR  (*(volatile uint32_t *)0xE000E014) // reload value
-#define SYST_CVR  (*(volatile uint32_t *)0xE000E018) // current value
-
-/* Frequency */
-#define SYSTEM_CLOCK 25000000  // 25 MHz
 
 /*————————————————————————————————————————————————————————————————————————————————————*/
 /* Type definitions                                                                   */
@@ -27,33 +22,60 @@
 
 /*————————————————————————————————————————————————————————————————————————————————————*/
 /* Static global variables                                                            */
-static volatile uint32_t tick_count = 0;
 
 /*————————————————————————————————————————————————————————————————————————————————————*/
 /* Global variables                                                                   */
+task_control_block_t* current_task;
 
 /*————————————————————————————————————————————————————————————————————————————————————*/
 /* Static functions definitions                                                       */
 
 /*————————————————————————————————————————————————————————————————————————————————————*/
 /* Global functions                                                                   */
-void systick_init(uint32_t ticks_per_second)
+void scheduler_init(void)
 {
-    SYST_RVR = (SYSTEM_CLOCK / ticks_per_second) - 1;
-    SYST_CVR = 0;
-    /* bit 2 = clksource (core clock), bit 1 = tickint (interrupt), bit 0 = enable */
-    SYST_CSR = 0x7;
+    if (task_get_tasks_counter())
+    {
+        current_task = task_get_tcb(0); 
+        current_task->state = RUNNING;
+    }
 }
 
-uint32_t systick_get_tick(void)
+void scheduler_run(void)
 {
-    return tick_count;
-}
+    uint32_t tasks_counter = task_get_tasks_counter();
+    task_control_block_t* best_candidate = NULL;
 
-/* Interrupt handler */
-void systick_handler(void)
-{
-    tick_count++;
+    for (uint32_t task_id = 0; task_id < tasks_counter; task_id++)
+    {
+        task_control_block_t* task_candidate = task_get_tcb(task_id);
+        
+        if (READY == task_candidate->state)
+        {
+            if (best_candidate)
+            {
+                if (task_candidate->priority > best_candidate->priority)
+                {
+                    best_candidate = task_candidate;
+                }
+            }
+            else
+            {
+                best_candidate = task_candidate;
+            }
+        }
+    }
+
+    if (best_candidate)
+    {
+        current_task->state = (RUNNING == current_task->state) ? READY : current_task->state;
+        current_task = best_candidate;
+        current_task->state = RUNNING;
+    }
+    else
+    {
+        /* Here idle task */
+    }
 }
 
 /*————————————————————————————————————————————————————————————————————————————————————*/

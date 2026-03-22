@@ -19,6 +19,9 @@
 /* Type definitions                                                                   */
 
 /*————————————————————————————————————————————————————————————————————————————————————*/
+/* Global variables                                                                   */
+
+/*————————————————————————————————————————————————————————————————————————————————————*/
 /* Global functions                                                                   */
 void systick_init(uint32_t ticks_per_second);
 uint32_t systick_get_tick(void);

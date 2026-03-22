@@ -1,49 +1,31 @@
+
 /*------------------------------------------------------------------------------------*/
 /*!
- * \file  task.h 
- * \brief Handling tasks
+ * \file  scheduler.h 
+ * \brief Scheduling tasks
  */
 /*------------------------------------------------------------------------------------*/
 
-#ifndef TASK_H
-#define TASK_H
+#ifndef SCHEDULER_H
+#define SCHEDULER_H
 
 /*————————————————————————————————————————————————————————————————————————————————————*/
 /* Includes                                                                           */
-#include <stdint.h>
+#include "task.h"
 
 /*————————————————————————————————————————————————————————————————————————————————————*/
 /* Defines                                                                            */
 
 /*————————————————————————————————————————————————————————————————————————————————————*/
 /* Type definitions                                                                   */
-typedef void (*task_func_t)(void);
-
-typedef enum
-{
-    READY,
-    RUNNING,
-    BLOCKED,
-    SUSPENDED
-} task_state_t;
-
-typedef struct TCB
-{
-    uint32_t*    stack_ptr;
-    uint32_t     priority;
-    task_state_t state;
-    uint32_t     wake_tick;
-    uint32_t     stack_size;
-    struct TCB* next;
-} task_control_block_t;
 
 /*————————————————————————————————————————————————————————————————————————————————————*/
 /* Global variables                                                                   */
+extern task_control_block_t* current_task;
 
 /*————————————————————————————————————————————————————————————————————————————————————*/
 /* Global functions                                                                   */
-void task_create(task_func_t task_function, uint32_t priority, uint32_t stack_size);
-uint32_t task_get_tasks_counter(void);
-task_control_block_t* task_get_tcb(uint32_t index);
+void scheduler_init(void);
+void scheduler_run(void);
 
-#endif /* TASK_H */
+#endif /* SCHEDULER_H */
