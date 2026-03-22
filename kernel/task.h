@@ -1,9 +1,22 @@
+/*------------------------------------------------------------------------------------*/
+/*!
+ * \file  task.h 
+ * \brief Handling tasks
+ */
+/*------------------------------------------------------------------------------------*/
 
 #ifndef TASK_H
 #define TASK_H
 
+/*————————————————————————————————————————————————————————————————————————————————————*/
+/* Includes                                                                           */
 #include <stdint.h>
 
+/*————————————————————————————————————————————————————————————————————————————————————*/
+/* Defines                                                                            */
+
+/*————————————————————————————————————————————————————————————————————————————————————*/
+/* Type definitions                                                                   */
 typedef void (*task_func_t)(void);
 
 typedef enum
@@ -24,8 +37,8 @@ typedef struct TCB
     struct TCB* next;
 } task_control_block_t;
 
-
-
+/*————————————————————————————————————————————————————————————————————————————————————*/
+/* Global functions                                                                   */
 void task_create(task_func_t task_function, uint32_t priority, uint32_t stack_size);
 uint32_t task_get_tasks_counter(void);
 
