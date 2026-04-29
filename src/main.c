@@ -8,6 +8,8 @@
 /*————————————————————————————————————————————————————————————————————————————————————*/
 /* Includes                                                                           */
 #include "systick.h"
+#include "scheduler.h"
+#include "task.h"
 
 /*————————————————————————————————————————————————————————————————————————————————————*/
 /* Defines                                                                            */
@@ -34,29 +36,33 @@
 static void uart_init(void);
 static void uart_print(const char *msg);
 static void uart_print_uint(uint32_t n);
+static void task1_handler(void);
+static void task2_handler(void);
 
 /*————————————————————————————————————————————————————————————————————————————————————*/
 /* Global functions                                                                   */
 void main(void)
 {
-    uint32_t last = 0;
+    task_func_t task1_fun = task1_handler;
+    task_func_t task2_fun = task2_handler;
 
     uart_init();
-    systick_init(1000);  // 1000 interrupts every second
     
-    uart_print("SysTick test start\n");
-
+    task_create(task1_fun, 1, 1024);
+    task_create(task2_fun, 1, 1024);
+    
+    uart_print("Program started\n");
+	
+    /*! NOTE: Must be called after creating at least one task */
+    scheduler_init();
+    scheduler_start();
+    
+    systick_init(1000);  // 1000 interrupts every second
+	task1_fun();
+	
     while (1)
     {
-        uint32_t now = systick_get_tick();
-
-        if (now - last >= 1000) // every 1000ms
-        {
-            uart_print("tick: ");
-            uart_print_uint(now);
-            uart_print("\r");
-            last = now;
-        }
+        // do nothing
     }
 }
 
@@ -97,5 +103,21 @@ static void uart_print_uint(uint32_t n)
     {
         while (UART_STATE & 0x1);
         UART_DATA = buf[j];
+    }
+}
+
+static void task1_handler(void)
+{
+    while (1)
+    {
+        uart_print("task 1");
+    }
+}
+
+static void task2_handler(void)
+{
+    while (1)
+    {
+        uart_print("task 2");
     }
 }

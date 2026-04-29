@@ -1,2 +1,2 @@
 # myRTOS
-My RTOS for Cortex-M4
+My RTOS for Cortex-M3

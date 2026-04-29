@@ -18,6 +18,8 @@
 
 /* Frequency */
 #define SYSTEM_CLOCK 25000000  // 25 MHz
+/* Interrupt control and state register */
+#define ICSR (*(volatile uint32_t*)0xE000ED04)
 
 /*————————————————————————————————————————————————————————————————————————————————————*/
 /* Type definitions                                                                   */
@@ -53,6 +55,9 @@ uint32_t systick_get_tick(void)
 /* Interrupt handler */
 void systick_handler(void)
 {
+    /* Trigger PendSV interrupt */
+    ICSR |= (1 << 28);
+
     tick_count++;
 }
 

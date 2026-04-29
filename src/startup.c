@@ -5,8 +5,13 @@
  */
 /*------------------------------------------------------------------------------------*/
 
+#define UART0_BASE   0x40004000
+#define UART_DATA    (*(volatile unsigned int *)(UART0_BASE + 0x00))
+#define UART_STATE   (*(volatile unsigned int *)(UART0_BASE + 0x04))
+
 extern void main(void);
 extern void systick_handler(void);
+extern void PendSV_Handler(void);
 
 #define STACK_TOP 0x20400000
 
@@ -18,6 +23,14 @@ void reset_handler(void)
 
 void default_handler(void)
 {
+    const char* msg = "Fault\n";
+
+    while (*msg)
+    {
+        while (UART_STATE & 0x1);
+        UART_DATA = *msg++;
+    }
+
     while (1);
 }
 
@@ -35,6 +48,6 @@ void (*vectors[])(void) =
     default_handler,            // 11 - SVCall
     default_handler,            // 12 - DebugMon
     0,                          // 13 - reserved
-    default_handler,            // 14 - PendSV
+    PendSV_Handler,             // 14 - PendSV
     systick_handler,            // 15 - SysTick
 };

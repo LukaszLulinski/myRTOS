@@ -27,5 +27,6 @@ extern task_control_block_t* current_task;
 /* Global functions                                                                   */
 void scheduler_init(void);
 void scheduler_run(void);
+extern void scheduler_start(void);
 
 #endif /* SCHEDULER_H */
