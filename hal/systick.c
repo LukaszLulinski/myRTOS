@@ -8,18 +8,10 @@
 /*————————————————————————————————————————————————————————————————————————————————————*/
 /* Includes                                                                           */
 #include "systick.h"
+#include "core.h"
 
 /*————————————————————————————————————————————————————————————————————————————————————*/
 /* Defines                                                                            */
-/* Registers SysTick */
-#define SYST_CSR  (*(volatile uint32_t *)0xE000E010) // control and status
-#define SYST_RVR  (*(volatile uint32_t *)0xE000E014) // reload value
-#define SYST_CVR  (*(volatile uint32_t *)0xE000E018) // current value
-
-/* Frequency */
-#define SYSTEM_CLOCK 25000000  // 25 MHz
-/* Interrupt control and state register */
-#define ICSR (*(volatile uint32_t*)0xE000ED04)
 
 /*————————————————————————————————————————————————————————————————————————————————————*/
 /* Type definitions                                                                   */

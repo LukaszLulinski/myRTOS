@@ -1,17 +1,16 @@
 /*------------------------------------------------------------------------------------*/
 /*!
- * \file  main.c 
- * \brief main component
+ * \file  mutex.c 
+ * \brief Handling mutexes
  */
 /*------------------------------------------------------------------------------------*/
 
 /*————————————————————————————————————————————————————————————————————————————————————*/
 /* Includes                                                                           */
-#include "core.h"
-#include "systick.h"
-#include "scheduler.h"
-#include "task.h"
+#include <stddef.h>
 #include "mutex.h"
+#include "scheduler.h"
+#include "core.h"
 
 /*————————————————————————————————————————————————————————————————————————————————————*/
 /* Defines                                                                            */
@@ -24,108 +23,81 @@
 
 /*————————————————————————————————————————————————————————————————————————————————————*/
 /* Static global variables                                                            */
-static mutex_t mutex;
 
 /*————————————————————————————————————————————————————————————————————————————————————*/
 /* Global variables                                                                   */
 
 /*————————————————————————————————————————————————————————————————————————————————————*/
 /* Static functions definitions                                                       */
-static void uart_init(void);
-static void uart_print(const char *msg);
-static void uart_print_uint(uint32_t n);
-static void task1_handler(void);
-static void task2_handler(void);
 
 /*————————————————————————————————————————————————————————————————————————————————————*/
 /* Global functions                                                                   */
-void main(void)
+void mutex_init(mutex_t* mutex)
 {
-    task_func_t task1_fun = task1_handler;
-    task_func_t task2_fun = task2_handler;
+    mutex->locked       = 0u;
+    mutex->owner        = NULL;
+    mutex->blocked_list = NULL;
+}
 
-    uart_init();
-    
-    task_create(task1_fun, 1, 1024);
-    task_create(task2_fun, 1, 1024);
-
-    mutex_init(&mutex);
-    
-    uart_print("Program started\n");
-	
-    /*! NOTE: Must be called after creating at least one task */
-    scheduler_init();
-    scheduler_start();
-    
-    systick_init(1000);  // 1000 interrupts every second
-	task1_fun();
-	
-    while (1)
+void mutex_lock(mutex_t* mutex)
+{
+    if (!mutex->locked)
     {
-        // do nothing
+        mutex->locked = 1u;
+        mutex->owner  = current_task;
+    }
+    else
+    {
+        current_task->state = BLOCKED;
+
+        if (!mutex->blocked_list)
+        {
+            mutex->blocked_list = current_task;
+        }
+        else
+        {
+            /* Add to the end of blocked linked list */
+            task_control_block_t* task = mutex->blocked_list;
+
+            while (task->next)
+            {
+                task = task->next;
+            }
+
+            task->next = current_task;
+        }
+
+        /* Trigger PendSV interrupt */
+        ICSR |= (1 << 28);
+    }
+}
+
+void mutex_unlock(mutex_t* mutex)
+{
+    mutex->locked = 0u;
+    mutex->owner  = NULL;
+
+    if (mutex->blocked_list)
+    {
+        /* It's FIFO, so remove the first task from the blocked list */
+        task_control_block_t* task = mutex->blocked_list;
+
+        if (mutex->blocked_list->next)
+        {
+            mutex->blocked_list = mutex->blocked_list->next;
+        }
+        else
+        {
+            mutex->blocked_list = NULL;
+        }
+
+        task->state = READY;
+        task->next = NULL;
+        
+        /* Trigger PendSV interrupt */
+        ICSR |= (1 << 28);
     }
 }
 
 /*————————————————————————————————————————————————————————————————————————————————————*/
 /* Static functions declarations                                                      */
-static void uart_init(void)
-{
-    UART_BAUDDIV = 16;
-    UART_CTRL    = 0x1;
-}
-
-/* Print */
-static void uart_print(const char *msg)
-{
-    while (*msg)
-    {
-        while (UART_STATE & 0x1);
-        UART_DATA = *msg++;
-    }
-}
-
-/* Print int */
-static void uart_print_uint(uint32_t n)
-{
-    char buf[12];
-    int i = 0;
-
-    if (n == 0) { uart_print("0"); return; }
-
-    while (n > 0)
-    {
-        buf[i++] = '0' + (n % 10);
-        n /= 10;
-    }
-
-    /* flip */
-    for (int j = i - 1; j >= 0; j--)
-    {
-        while (UART_STATE & 0x1);
-        UART_DATA = buf[j];
-    }
-}
-
-static void task1_handler(void)
-{
-    while (1)
-    {
-        mutex_lock(&mutex);
-        uart_print("task 1\n");
-        mutex_unlock(&mutex);
-
-        for (volatile int i = 0; i < 100000; i++); // dummy delay - to be replaced with software timer
-    }
-}
-
-static void task2_handler(void)
-{
-    while (1)
-    {
-        mutex_lock(&mutex);
-        uart_print("task 2\n\n");
-        mutex_unlock(&mutex);
-
-        for (volatile int i = 0; i < 100000; i++); // dummy delay - to be replaced with software timer
-    }
-}

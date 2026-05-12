@@ -14,7 +14,8 @@ SRCS    = src/main.c 	\
 	hal/systick.c 		\
 	kernel/task.c 		\
 	kernel/scheduler.c 	\
-	kernel/context.s
+	kernel/context.s	\
+	kernel/mutex.c
 
 all: $(TARGET)
 
