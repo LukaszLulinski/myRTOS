@@ -9,6 +9,9 @@
 /* Includes                                                                           */
 #include <stddef.h>
 #include "task.h"
+#include "scheduler.h"
+#include "systick.h"
+#include "core.h"
 
 /*————————————————————————————————————————————————————————————————————————————————————*/
 /* Defines                                                                            */
@@ -24,7 +27,7 @@
 
 /*————————————————————————————————————————————————————————————————————————————————————*/
 /* Static global variables                                                            */
-static uint32_t tasks_counter = 0;
+static uint32_t tasks_counter;
 static uint32_t stacks[MAX_TASKS][MAX_STACK_SIZE];
 static task_control_block_t tcb_pool[MAX_TASKS];
 
@@ -36,6 +39,11 @@ static task_control_block_t tcb_pool[MAX_TASKS];
 
 /*————————————————————————————————————————————————————————————————————————————————————*/
 /* Global functions                                                                   */
+void task_init(void)
+{
+    tasks_counter = 0u;
+}
+
 void task_create(task_func_t task_function, uint32_t priority, uint32_t stack_size)
 {
     if (MAX_TASKS > tasks_counter)
@@ -45,7 +53,7 @@ void task_create(task_func_t task_function, uint32_t priority, uint32_t stack_si
         
         tcb->priority   = priority;
         tcb->state      = READY;
-        tcb->wake_tick  = 0;
+        tcb->wake_tick  = 0u;
         tcb->next       = NULL;
         tcb->stack_size = st_size;
         tcb->stack_ptr  = &stacks[tasks_counter][st_size - 16];
@@ -80,6 +88,30 @@ uint32_t task_get_tasks_counter(void)
 task_control_block_t* task_get_tcb(uint32_t index)
 {
     return &tcb_pool[index];
+}
+
+void task_delay(uint32_t ticks)
+{
+    current_task->wake_tick = systick_get_tick() + ticks;
+    current_task->state = BLOCKED;
+    /* Trigger PendSV interrupt */
+    ICSR |= (1 << 28);
+}
+
+void task_delay_update(void)
+{
+    uint32_t current_tick = systick_get_tick();
+    uint32_t tasks_counter = task_get_tasks_counter();
+
+    for (uint32_t task_id = 0u; task_id < tasks_counter; task_id++)
+    {
+        task_control_block_t* tcb = task_get_tcb(task_id);
+        
+        if (BLOCKED == tcb->state && current_tick >= tcb->wake_tick)
+        {
+            tcb->state = READY;
+        }
+    }
 }
 
 /*————————————————————————————————————————————————————————————————————————————————————*/

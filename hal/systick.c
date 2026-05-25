@@ -9,6 +9,8 @@
 /* Includes                                                                           */
 #include "systick.h"
 #include "core.h"
+#include "timer.h"
+#include "task.h"
 
 /*————————————————————————————————————————————————————————————————————————————————————*/
 /* Defines                                                                            */
@@ -21,7 +23,7 @@
 
 /*————————————————————————————————————————————————————————————————————————————————————*/
 /* Static global variables                                                            */
-static volatile uint32_t tick_count = 0;
+static volatile uint32_t tick_count;
 
 /*————————————————————————————————————————————————————————————————————————————————————*/
 /* Global variables                                                                   */
@@ -33,6 +35,8 @@ static volatile uint32_t tick_count = 0;
 /* Global functions                                                                   */
 void systick_init(uint32_t ticks_per_second)
 {
+    tick_count = 0;
+
     SYST_RVR = (SYSTEM_CLOCK / ticks_per_second) - 1;
     SYST_CVR = 0;
     /* bit 2 = clksource (core clock), bit 1 = tickint (interrupt), bit 0 = enable */
@@ -47,10 +51,11 @@ uint32_t systick_get_tick(void)
 /* Interrupt handler */
 void systick_handler(void)
 {
+    tick_count++;
+    timer_update();
+    task_delay_update();
     /* Trigger PendSV interrupt */
     ICSR |= (1 << 28);
-
-    tick_count++;
 }
 
 /*————————————————————————————————————————————————————————————————————————————————————*/

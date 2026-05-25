@@ -29,14 +29,17 @@ task_control_block_t* current_task;
 
 /*————————————————————————————————————————————————————————————————————————————————————*/
 /* Static functions definitions                                                       */
+static void idle_task(void);
 
 /*————————————————————————————————————————————————————————————————————————————————————*/
 /* Global functions                                                                   */
 void scheduler_init(void)
 {
+    task_create(idle_task, 0u, 64u);
+
     if (task_get_tasks_counter())
     {
-        current_task = task_get_tcb(0); 
+        current_task = task_get_tcb(0u); 
         current_task->state = RUNNING;
     }
 }
@@ -46,7 +49,7 @@ void scheduler_run(void)
     uint32_t tasks_counter = task_get_tasks_counter();
     task_control_block_t* best_candidate = NULL;
 
-    for (uint32_t task_id = 0; task_id < tasks_counter; task_id++)
+    for (uint32_t task_id = 0u; task_id < tasks_counter; task_id++)
     {
         task_control_block_t* task_candidate = task_get_tcb(task_id);
         
@@ -74,9 +77,17 @@ void scheduler_run(void)
     }
     else
     {
-        /* Here idle task */
+        /* Going to idle task */
     }
 }
 
 /*————————————————————————————————————————————————————————————————————————————————————*/
 /* Static functions declarations                                                      */
+static void idle_task(void)
+{
+    while (1)
+    {
+        /* do nothing - wait for interrupt, going to sleep to save energy */
+        __asm volatile ("WFI");
+    }
+}

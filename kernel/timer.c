@@ -1,17 +1,14 @@
 /*------------------------------------------------------------------------------------*/
 /*!
- * \file  main.c 
- * \brief main component
+ * \file  timer.c 
+ * \brief Handling timers
  */
 /*------------------------------------------------------------------------------------*/
 
 /*————————————————————————————————————————————————————————————————————————————————————*/
 /* Includes                                                                           */
-#include "core.h"
-#include "systick.h"
-#include "scheduler.h"
-#include "task.h"
-#include "mutex.h"
+#include <stddef.h>
+#include "timer.h"
 
 /*————————————————————————————————————————————————————————————————————————————————————*/
 /* Defines                                                                            */
@@ -24,105 +21,79 @@
 
 /*————————————————————————————————————————————————————————————————————————————————————*/
 /* Static global variables                                                            */
-static mutex_t mutex;
 
 /*————————————————————————————————————————————————————————————————————————————————————*/
 /* Global variables                                                                   */
 
 /*————————————————————————————————————————————————————————————————————————————————————*/
 /* Static functions definitions                                                       */
-static void uart_init(void);
-static void uart_print(const char *msg);
-static void uart_print_uint(uint32_t n);
-static void task1_handler(void);
-static void task2_handler(void);
 
 /*————————————————————————————————————————————————————————————————————————————————————*/
 /* Global functions                                                                   */
-void main(void)
+void timer_init(void)
 {
-    uart_init();
-    
-    task_create(task1_handler, 1u, 1024u);
-    task_create(task2_handler, 1u, 1024u);
-
-    mutex_init(&mutex);
-    
-    uart_print("Program started\n");
-	
-    /*! NOTE: Must be called after creating at least one task */
-    scheduler_init();
-    scheduler_start();
-    
-    systick_init(1000u);  // 1000 interrupts every second
-	task1_handler();
-	
-    while (1)
+    for (uint32_t timer_id = 0; timer_id < MAX_TIMERS; timer_id++)
     {
-        // do nothing
+        timers_pool[timer_id].active = false;
+    }
+}
+
+timer_t* timer_start(uint32_t delay_ticks, bool cyclic, timer_func_t func)
+{
+    for (uint32_t timer_id = 0; timer_id < MAX_TIMERS; timer_id++)
+    {
+        timer_t* timer = &timers_pool[timer_id];
+        
+        if (timer->active == false)
+        {
+            timer->expire_tick = delay_ticks;
+            timer->interval_ticks = delay_ticks;
+            timer->func = func;
+            timer->cyclic = cyclic;
+            timer->active = true;
+            return timer;
+        }
+    }
+
+    return NULL;
+}
+
+void timer_stop(timer_t* timer)
+{
+    timer->active = false;
+}
+
+void timer_update(void)
+{
+    for (uint32_t timer_id = 0; timer_id < MAX_TIMERS; timer_id++)
+    {
+        timer_t* timer = &timers_pool[timer_id];
+        
+        if (timer->active)
+        {
+            if (timer->expire_tick > 0)
+            {
+                timer->expire_tick--;
+            }
+            else
+            {
+                if (timer->func)
+                {
+                    timer->func();
+                }
+
+                if (timer->cyclic)
+                {
+                    timer->expire_tick = timer->interval_ticks;
+                }
+                else
+                {
+                    timer->active = false;
+                }
+            }
+        }
     }
 }
 
 /*————————————————————————————————————————————————————————————————————————————————————*/
 /* Static functions declarations                                                      */
-static void uart_init(void)
-{
-    UART_BAUDDIV = 16;
-    UART_CTRL    = 0x1;
-}
-
-/* Print */
-static void uart_print(const char *msg)
-{
-    while (*msg)
-    {
-        while (UART_STATE & 0x1);
-        UART_DATA = *msg++;
-    }
-}
-
-/* Print int */
-static void uart_print_uint(uint32_t n)
-{
-    char buf[12];
-    int i = 0;
-
-    if (n == 0) { uart_print("0"); return; }
-
-    while (n > 0)
-    {
-        buf[i++] = '0' + (n % 10);
-        n /= 10;
-    }
-
-    /* flip */
-    for (int j = i - 1; j >= 0; j--)
-    {
-        while (UART_STATE & 0x1);
-        UART_DATA = buf[j];
-    }
-}
-
-static void task1_handler(void)
-{
-    while (1)
-    {
-        mutex_lock(&mutex);
-        uart_print("task 1\n");
-        mutex_unlock(&mutex);
-
-        task_delay(1000u);
-    }
-}
-
-static void task2_handler(void)
-{
-    while (1)
-    {
-        mutex_lock(&mutex);
-        uart_print("task 2\n\n");
-        mutex_unlock(&mutex);
-
-        task_delay(500u);
-    }
-}

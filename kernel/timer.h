@@ -1,52 +1,44 @@
 /*------------------------------------------------------------------------------------*/
 /*!
- * \file  task.h 
- * \brief Handling tasks
+ * \file  timer.h 
+ * \brief Handling timers
  */
 /*------------------------------------------------------------------------------------*/
 
-#ifndef TASK_H
-#define TASK_H
+#ifndef TIMER_H
+#define TIMER_H
 
 /*————————————————————————————————————————————————————————————————————————————————————*/
 /* Includes                                                                           */
 #include <stdint.h>
+#include <stdbool.h>
 
 /*————————————————————————————————————————————————————————————————————————————————————*/
 /* Defines                                                                            */
+#define MAX_TIMERS (10)
 
 /*————————————————————————————————————————————————————————————————————————————————————*/
 /* Type definitions                                                                   */
-typedef void (*task_func_t)(void);
+typedef void (*timer_func_t)(void);
 
-typedef enum
+typedef struct timer_t
 {
-    READY,
-    RUNNING,
-    BLOCKED,
-    SUSPENDED
-} task_state_t;
-
-typedef struct TCB
-{
-    uint32_t*    stack_ptr;
-    uint32_t     priority;
-    task_state_t state;
-    uint32_t     wake_tick;
-    uint32_t     stack_size;
-    struct TCB* next;
-} task_control_block_t;
+    uint32_t     interval_ticks;
+    uint32_t     expire_tick;
+    timer_func_t func;
+    bool         cyclic;
+    bool         active;
+} timer_t;
 
 /*————————————————————————————————————————————————————————————————————————————————————*/
 /* Global variables                                                                   */
+static timer_t timers_pool[MAX_TIMERS];
 
 /*————————————————————————————————————————————————————————————————————————————————————*/
 /* Global functions                                                                   */
-void task_init(void);
-void task_create(task_func_t task_function, uint32_t priority, uint32_t stack_size);
-uint32_t task_get_tasks_counter(void);
-task_control_block_t* task_get_tcb(uint32_t index);
-void task_delay(uint32_t ticks);
-void task_delay_update(void);
+void timer_init(void);
+timer_t* timer_start(uint32_t delay_ticks, bool cyclic, timer_func_t func);
+void timer_stop(timer_t* timer);
+void timer_update(void);
 
-#endif /* TASK_H */
+#endif /* TIMER_H */
