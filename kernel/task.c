@@ -98,6 +98,15 @@ void task_delay(uint32_t ticks)
     ICSR |= (1 << 28);
 }
 
+void task_delay_until(uint32_t* last_wake_tick, uint32_t ticks)
+{
+    *last_wake_tick += ticks;
+    current_task->wake_tick = *last_wake_tick;
+    current_task->state = BLOCKED;
+    /* Trigger PendSV interrupt */
+    ICSR |= (1 << 28);
+}
+
 void task_delay_update(void)
 {
     uint32_t current_tick = systick_get_tick();

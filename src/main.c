@@ -105,24 +105,28 @@ static void uart_print_uint(uint32_t n)
 
 static void task1_handler(void)
 {
+    uint32_t last_wake_tick = systick_get_tick();
+    
     while (1)
     {
         mutex_lock(&mutex);
         uart_print("task 1\n");
         mutex_unlock(&mutex);
 
-        task_delay(1000u);
+        task_delay_until(&last_wake_tick, 1000u);
     }
 }
 
 static void task2_handler(void)
 {
+    uint32_t last_wake_tick = systick_get_tick();
+
     while (1)
     {
         mutex_lock(&mutex);
-        uart_print("task 2\n\n");
+        uart_print("task 2\n");
         mutex_unlock(&mutex);
 
-        task_delay(500u);
+        task_delay_until(&last_wake_tick, 500u);
     }
 }

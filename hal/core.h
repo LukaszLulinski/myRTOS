@@ -21,7 +21,7 @@
 #define SYST_RVR  (*(volatile uint32_t *)0xE000E014) // reload value
 #define SYST_CVR  (*(volatile uint32_t *)0xE000E018) // current value
 
-/* Frequency */
+/* Frequency for MPS2-AN386 */
 #define SYSTEM_CLOCK 25000000  // 25 MHz
 
 #define UART0_BASE   0x40004000

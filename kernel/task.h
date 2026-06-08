@@ -47,6 +47,7 @@ void task_create(task_func_t task_function, uint32_t priority, uint32_t stack_si
 uint32_t task_get_tasks_counter(void);
 task_control_block_t* task_get_tcb(uint32_t index);
 void task_delay(uint32_t ticks);
+void task_delay_until(uint32_t* last_wake_tick, uint32_t ticks);
 void task_delay_update(void);
 
 #endif /* TASK_H */
