@@ -1,18 +1,17 @@
 /*------------------------------------------------------------------------------------*/
 /*!
- * \file  main.c 
- * \brief main component
+ * \file  semaphore.c 
+ * \brief Handling semaphores
  */
 /*------------------------------------------------------------------------------------*/
 
 /*————————————————————————————————————————————————————————————————————————————————————*/
 /* Includes                                                                           */
-#include "core.h"
-#include "systick.h"
-#include "scheduler.h"
-#include "task.h"
-#include "mutex.h"
+#include <stddef.h>
 #include "semaphore.h"
+#include "task.h"
+#include "scheduler.h"
+#include "core.h"
 
 /*————————————————————————————————————————————————————————————————————————————————————*/
 /* Defines                                                                            */
@@ -25,110 +24,57 @@
 
 /*————————————————————————————————————————————————————————————————————————————————————*/
 /* Static global variables                                                            */
-static mutex_t mutex;
-static semaphore_t semaphore;
-static uint32_t shared_counter = 0;
 
 /*————————————————————————————————————————————————————————————————————————————————————*/
 /* Global variables                                                                   */
 
 /*————————————————————————————————————————————————————————————————————————————————————*/
 /* Static functions declarations                                                      */
-static void uart_init(void);
-static void uart_print(const char *msg);
-static void uart_print_uint(uint32_t n);
-static void producer(void);
-static void consumer(void);
 
 /*————————————————————————————————————————————————————————————————————————————————————*/
 /* Global functions                                                                   */
-void main(void)
+void semaphore_init(semaphore_t* semaphore, uint32_t initial_count)
 {
-    uart_init();
-    
-    task_create(producer, 1u, 128u);
-    task_create(consumer, 1u, 128u);
+    semaphore->count = initial_count;
+    semaphore->blocked_list = NULL;
+}
 
-    mutex_init(&mutex);
-    semaphore_init(&semaphore, 0u);
-
-    uart_print("Program started\n");
-	
-    /*! NOTE: Must be called after creating at least one task */
-    scheduler_init();
-    scheduler_start();
-    
-    systick_init(1000u);  // 1000 interrupts every second
-    producer();
-	
-    while (1)
+void semaphore_wait(semaphore_t* semaphore)
+{
+    if (semaphore->count > 0)
     {
-        // do nothing
+        semaphore->count--;
     }
+    else
+    {
+        /* Block the current task and add it to the blocked list */
+        current_task->next = semaphore->blocked_list;
+        semaphore->blocked_list = current_task;
+        current_task->state = BLOCKED;
+
+        /* Trigger PendSV interrupt */
+        ICSR |= (1 << 28);
+    }
+}
+
+void semaphore_signal(semaphore_t* semaphore)
+{
+    if (semaphore->blocked_list)
+    {
+        /* Unblock the first task in the blocked list */
+        task_control_block_t* task_to_unblock = semaphore->blocked_list;
+        semaphore->blocked_list = task_to_unblock->next;
+        task_to_unblock->state = READY;
+        task_to_unblock->next = NULL;
+
+        /* Trigger PendSV interrupt */
+        ICSR |= (1 << 28);
+    }
+    else
+    {
+        semaphore->count++;
+    }    
 }
 
 /*————————————————————————————————————————————————————————————————————————————————————*/
 /* Static functions definitions                                                       */
-static void uart_init(void)
-{
-    UART_BAUDDIV = 16;
-    UART_CTRL    = 0x1;
-}
-
-/* Print */
-static void uart_print(const char *msg)
-{
-    while (*msg)
-    {
-        while (UART_STATE & 0x1);
-        UART_DATA = *msg++;
-    }
-}
-
-/* Print int */
-static void uart_print_uint(uint32_t n)
-{
-    char buf[12];
-    int i = 0;
-
-    if (n == 0) { uart_print("0"); return; }
-
-    while (n > 0)
-    {
-        buf[i++] = '0' + (n % 10);
-        n /= 10;
-    }
-
-    /* flip */
-    for (int j = i - 1; j >= 0; j--)
-    {
-        while (UART_STATE & 0x1);
-        UART_DATA = buf[j];
-    }
-}
-
-static void producer(void)
-{
-    uint32_t last_wake = systick_get_tick();
-    while (1)
-    {
-        shared_counter++;
-        uart_print("produced: ");
-        uart_print_uint(shared_counter);
-        uart_print("\n");
-        semaphore_signal(&semaphore);
-
-        task_delay_until(&last_wake, 1000);
-    }
-}
-
-static void consumer(void)
-{
-    while (1)
-    {
-        semaphore_wait(&semaphore);
-        uart_print("consumed: ");
-        uart_print_uint(shared_counter);
-        uart_print("\n");
-    }
-}

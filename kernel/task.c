@@ -17,7 +17,7 @@
 /* Defines                                                                            */
 #define DUMMY_XPSR	    (0x01000000)
 #define MAX_TASKS       (3)
-#define MAX_STACK_SIZE  (100)
+#define MAX_STACK_SIZE  (128)
 
 /*————————————————————————————————————————————————————————————————————————————————————*/
 /* Type definitions                                                                   */
@@ -93,7 +93,7 @@ task_control_block_t* task_get_tcb(uint32_t index)
 void task_delay(uint32_t ticks)
 {
     current_task->wake_tick = systick_get_tick() + ticks;
-    current_task->state = BLOCKED;
+    current_task->state = BLOCKED_DELAY;
     /* Trigger PendSV interrupt */
     ICSR |= (1 << 28);
 }
@@ -102,7 +102,7 @@ void task_delay_until(uint32_t* last_wake_tick, uint32_t ticks)
 {
     *last_wake_tick += ticks;
     current_task->wake_tick = *last_wake_tick;
-    current_task->state = BLOCKED;
+    current_task->state = BLOCKED_DELAY;
     /* Trigger PendSV interrupt */
     ICSR |= (1 << 28);
 }
@@ -116,7 +116,7 @@ void task_delay_update(void)
     {
         task_control_block_t* tcb = task_get_tcb(task_id);
         
-        if (BLOCKED == tcb->state && current_tick >= tcb->wake_tick)
+        if (BLOCKED_DELAY == tcb->state && current_tick >= tcb->wake_tick)
         {
             tcb->state = READY;
         }
