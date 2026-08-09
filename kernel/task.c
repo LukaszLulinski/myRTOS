@@ -35,7 +35,7 @@ static task_control_block_t tcb_pool[MAX_TASKS];
 /* Global variables                                                                   */
 
 /*————————————————————————————————————————————————————————————————————————————————————*/
-/* Static functions definitions                                                       */
+/* Static functions declarations                                                      */
 
 /*————————————————————————————————————————————————————————————————————————————————————*/
 /* Global functions                                                                   */
@@ -124,4 +124,4 @@ void task_delay_update(void)
 }
 
 /*————————————————————————————————————————————————————————————————————————————————————*/
-/* Static functions declarations                                                      */
+/* Static functions definitions                                                       */

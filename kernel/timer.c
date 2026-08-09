@@ -26,7 +26,7 @@
 /* Global variables                                                                   */
 
 /*————————————————————————————————————————————————————————————————————————————————————*/
-/* Static functions definitions                                                       */
+/* Static functions declarations                                                      */
 
 /*————————————————————————————————————————————————————————————————————————————————————*/
 /* Global functions                                                                   */
@@ -96,4 +96,4 @@ void timer_update(void)
 }
 
 /*————————————————————————————————————————————————————————————————————————————————————*/
-/* Static functions declarations                                                      */
+/* Static functions definitions                                                       */

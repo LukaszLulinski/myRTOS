@@ -28,7 +28,7 @@
 task_control_block_t* current_task;
 
 /*————————————————————————————————————————————————————————————————————————————————————*/
-/* Static functions definitions                                                       */
+/* Static functions declarations                                                      */
 static void idle_task(void);
 
 /*————————————————————————————————————————————————————————————————————————————————————*/
@@ -82,7 +82,7 @@ void scheduler_run(void)
 }
 
 /*————————————————————————————————————————————————————————————————————————————————————*/
-/* Static functions declarations                                                      */
+/* Static functions definitions                                                       */
 static void idle_task(void)
 {
     while (1)

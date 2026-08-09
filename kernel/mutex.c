@@ -28,7 +28,7 @@
 /* Global variables                                                                   */
 
 /*————————————————————————————————————————————————————————————————————————————————————*/
-/* Static functions definitions                                                       */
+/* Static functions declarations                                                      */
 
 /*————————————————————————————————————————————————————————————————————————————————————*/
 /* Global functions                                                                   */
@@ -100,4 +100,4 @@ void mutex_unlock(mutex_t* mutex)
 }
 
 /*————————————————————————————————————————————————————————————————————————————————————*/
-/* Static functions declarations                                                      */
+/* Static functions definitions                                                       */

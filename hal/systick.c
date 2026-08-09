@@ -29,7 +29,7 @@ static volatile uint32_t tick_count;
 /* Global variables                                                                   */
 
 /*————————————————————————————————————————————————————————————————————————————————————*/
-/* Static functions definitions                                                       */
+/* Static functions declarations                                                      */
 
 /*————————————————————————————————————————————————————————————————————————————————————*/
 /* Global functions                                                                   */
@@ -59,4 +59,4 @@ void systick_handler(void)
 }
 
 /*————————————————————————————————————————————————————————————————————————————————————*/
-/* Static functions declarations                                                      */
+/* Static functions definitions                                                       */
