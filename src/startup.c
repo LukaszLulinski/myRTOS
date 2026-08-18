@@ -12,6 +12,7 @@
 extern void main(void);
 extern void systick_handler(void);
 extern void PendSV_Handler(void);
+extern void SVC_Handler(void);
 
 #define STACK_TOP 0x20400000
 
@@ -45,7 +46,7 @@ void (*vectors[])(void) =
     default_handler,            // 5  - BusFault
     default_handler,            // 6  - UsageFault
     0, 0, 0, 0,                 // 7-10 - reserved
-    default_handler,            // 11 - SVCall
+    SVC_Handler,                // 11 - SVCall
     default_handler,            // 12 - DebugMon
     0,                          // 13 - reserved
     PendSV_Handler,             // 14 - PendSV

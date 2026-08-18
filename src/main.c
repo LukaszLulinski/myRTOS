@@ -54,12 +54,10 @@ void main(void)
 
     uart_print("Program started\n");
 	
+    systick_init(1000u); // 1000 interrupts every second
+
     /*! NOTE: Must be called after creating at least one task */
     scheduler_init();
-    scheduler_start();
-    
-    systick_init(1000u);  // 1000 interrupts every second
-    producer();
 	
     while (1)
     {

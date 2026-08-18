@@ -42,6 +42,8 @@ void scheduler_init(void)
         current_task = task_get_tcb(0u); 
         current_task->state = RUNNING;
     }
+
+    scheduler_start();
 }
 
 void scheduler_run(void)
