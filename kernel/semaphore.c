@@ -9,7 +9,6 @@
 /* Includes                                                                           */
 #include <stddef.h>
 #include "semaphore.h"
-#include "task.h"
 #include "scheduler.h"
 #include "core.h"
 
@@ -48,7 +47,7 @@ void semaphore_wait(semaphore_t* semaphore)
     else
     {
         /* Block the current task and add it to the blocked list */
-        current_task->next = semaphore->blocked_list;
+        // current_task->next = semaphore->blocked_list;
         semaphore->blocked_list = current_task;
         current_task->state = BLOCKED;
 

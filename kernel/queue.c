@@ -1,15 +1,13 @@
 /*------------------------------------------------------------------------------------*/
 /*!
- * \file  main.c 
- * \brief main component
+ * \file  queue.c 
+ * \brief Handling queues
  */
 /*------------------------------------------------------------------------------------*/
 
 /*————————————————————————————————————————————————————————————————————————————————————*/
 /* Includes                                                                           */
-#include "core.h"
-#include "systick.h"
-#include "scheduler.h"
+#include <stddef.h>
 #include "queue.h"
 
 /*————————————————————————————————————————————————————————————————————————————————————*/
@@ -23,109 +21,61 @@
 
 /*————————————————————————————————————————————————————————————————————————————————————*/
 /* Static global variables                                                            */
-static queue_t shared_queue;
 
 /*————————————————————————————————————————————————————————————————————————————————————*/
 /* Global variables                                                                   */
 
 /*————————————————————————————————————————————————————————————————————————————————————*/
 /* Static functions declarations                                                      */
-static void uart_init(void);
-static void uart_print(const char *msg);
-static void uart_print_uint(uint32_t n);
-static void producer(void);
-static void consumer(void);
+void* memcpy(void* dest, const void* src, uint32_t n);
 
 /*————————————————————————————————————————————————————————————————————————————————————*/
 /* Global functions                                                                   */
-void main(void)
+void queue_init(queue_t* q, uint32_t item_size)
 {
-    uart_init();
-    
-    task_create(producer, 1u, 128u);
-    task_create(consumer, 1u, 128u);
-
-    queue_init(&shared_queue, sizeof(uint32_t));
-
-    uart_print("Program started\n");
-	
-    systick_init(1000u); // 1000 interrupts every second
-
-    /*! NOTE: Must be called after creating at least one task */
-    scheduler_init();
-	
-    while (1)
+    if ((item_size == 0) || (item_size > MAX_ITEM_SIZE))
     {
-        // do nothing
+        item_size = MAX_ITEM_SIZE;
     }
+
+    q->item_size = item_size;
+    q->head = 0;
+    q->tail = 0;
+    semaphore_init(&q->free_slots, MAX_QUEUE_SIZE);
+    semaphore_init(&q->used_slots, 0u);
+}
+
+void queue_push(queue_t* q, const void* item)
+{
+    semaphore_wait(&q->free_slots);
+    
+    memcpy(&q->data[q->tail * q->item_size], item, q->item_size);
+    q->tail = (q->tail + 1) % MAX_QUEUE_SIZE;
+    
+    semaphore_signal(&q->used_slots);
+}
+
+void queue_pop(queue_t* q, void* item)
+{
+    semaphore_wait(&q->used_slots);
+    
+    memcpy(item, &q->data[q->head * q->item_size], q->item_size);
+    q->head = (q->head + 1) % MAX_QUEUE_SIZE;
+    
+    semaphore_signal(&q->free_slots);
 }
 
 /*————————————————————————————————————————————————————————————————————————————————————*/
 /* Static functions definitions                                                       */
-static void uart_init(void)
+void* memcpy(void* dest, const void* src, uint32_t n)
 {
-    UART_BAUDDIV = 16;
-    UART_CTRL    = 0x1;
-}
-
-/* Print */
-static void uart_print(const char *msg)
-{
-    while (*msg)
+    uint8_t* d = (uint8_t*)dest;
+    const uint8_t* s = (const uint8_t*)src;
+    
+    for (uint32_t i = 0; i < n; i++)
     {
-        while (UART_STATE & 0x1);
-        UART_DATA = *msg++;
+        d[i] = s[i];
     }
-}
-
-/* Print int */
-static void uart_print_uint(uint32_t n)
-{
-    char buf[12];
-    int i = 0;
-
-    if (n == 0) { uart_print("0"); return; }
-
-    while (n > 0)
-    {
-        buf[i++] = '0' + (n % 10);
-        n /= 10;
-    }
-
-    /* flip */
-    for (int j = i - 1; j >= 0; j--)
-    {
-        while (UART_STATE & 0x1);
-        UART_DATA = buf[j];
-    }
-}
-
-static void producer(void)
-{
-    uint32_t last_wake = systick_get_tick();
-    uint32_t shared_counter = 0;
-    while (1)
-    {
-        shared_counter++;
-        queue_push(&shared_queue, &shared_counter);
-
-        uart_print("produced: ");
-        uart_print_uint(shared_counter);
-        uart_print("\n");
-
-        task_delay_until(&last_wake, 1000);
-    }
-}
-
-static void consumer(void)
-{
-    uint32_t shared_counter = 0;
-    while (1)
-    {
-        queue_pop(&shared_queue, &shared_counter);
-        
-        uart_print("consumed: ");
-        uart_print_uint(shared_counter);
-        uart_print("\n");
-    }
+    
+    return dest;
 }

@@ -9,7 +9,6 @@
 /* Includes                                                                           */
 #include <stddef.h>
 #include "scheduler.h"
-#include "task.h"
 
 /*————————————————————————————————————————————————————————————————————————————————————*/
 /* Defines                                                                            */
