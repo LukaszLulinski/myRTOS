@@ -21,8 +21,11 @@ SRCS    = src/main.c 	\
 
 all: $(TARGET)
 
-$(TARGET): $(SRCS)
+$(TARGET): $(SRCS) | out
 	$(CC) $(CFLAGS) $(LDFLAGS) -o $@ $(SRCS)
 
 clean:
 	rm -f $(TARGET) out/myRTOS.map
+
+out:
+	mkdir -p out
