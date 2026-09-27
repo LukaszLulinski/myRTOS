@@ -1,186 +1,61 @@
 # myRTOS
 
-A lightweight preemptive RTOS kernel for ARM Cortex-M4, written from scratch in C and ARM assembly. Built as an educational project to understand the internals of real-time operating systems.
-
-Tested on **QEMU MPS2-AN386** (Cortex-M4 emulation).
-
----
+A small educational RTOS for ARM Cortex-M4, written in C and ARM assembly. It demonstrates task scheduling, context switching, synchronization, queues, and tick-based delays on QEMU's MPS2-AN386 board model.
 
 ## Features
 
-- **Preemptive scheduler** with priority-based task selection
-- **Context switching** implemented in ARM assembly (PendSV handler)
-- **Periodic and aperiodic tasks**
-- **Mutexes** with FIFO blocking queue
-- **Software timers** with one-shot and cyclic modes
-- **task_delay** — non-blocking delay that yields CPU to other tasks
-- **Idle task** with WFI (Wait For Interrupt) for low power consumption
-- **SysTick** — 1ms system tick driving the scheduler and timers
+- Priority-based preemptive scheduling. The scheduler selects the highest-priority task in `READY` state.
+- PendSV context switching, with task register state saved on each task's stack.
+- SysTick-driven timekeeping and task delays. `systick_init(1000u)` configures a 1 ms tick for the 25 MHz board clock.
+- Tasks with relative (`task_delay`) and periodic (`task_delay_until`) delays.
+- Mutexes with a FIFO list of blocked tasks.
+- Counting semaphores. Blocked tasks are stored LIFO.
+- Fixed-size queues built from semaphores, with up to 10 items and 8 bytes per item.
+- Software timers with one-shot and cyclic modes.
+- An idle task that waits using `WFI`.
 
----
+## Project layout
 
-## Architecture
-
-### Task States
-
-```
-          task_create()
-               │
-               ▼
-           ┌───────┐
-    ┌──────│ READY │◄─────────────────────┐
-    │      └───────┘                      │
-    │          │ scheduler selects        │ mutex_unlock()
-    │          ▼                          │ task_delay expires
-    │      ┌─────────┐   mutex_lock()  ┌─────────┐
-    │      │ RUNNING │────────────────►│ BLOCKED │
-    │      └─────────┘   task_delay()  └─────────┘
-    │          │
-    └──────────┘
-     preempted by SysTick
-```
-
-### Interrupt Flow
-
-```
-SysTick (1ms)
-├── tick_count++
-├── timer_update()     — fire expired software timers
-├── task_delay_update() — wake up delayed tasks
-└── trigger PendSV
-
-PendSV (lowest priority)
-├── save R4-R11 to current task stack (PSP)
-├── save SP to current_task->stack_ptr
-├── scheduler_run() — select next highest priority READY task
-├── load SP from new task stack_ptr
-└── restore R4-R11 from new task stack
-```
-
-### Memory Layout (MPS2-AN386)
-
-```
-FLASH: 0x00000000 — 0x003FFFFF (4MB) — code, rodata, vectors
-RAM:   0x20000000 — 0x203FFFFF (4MB) — stacks, TCB pool, data, bss
-```
-
----
-
-## Project Structure
-
-```
+```text
 myRTOS/
 ├── hal/
-│   ├── core.h            — core system defines
-│   └── systick.c/h       — SysTick driver (1ms tick)
+│   ├── core.h              Cortex-M registers and MPS2-AN386 clock definition
+│   └── systick.c/h         SysTick setup and tick counter
 ├── kernel/
-│   ├── task.c/h          — TCB, task_create, task_delay
-│   ├── scheduler.c/h     — priority scheduler, idle task
-│   ├── context.s         — PendSV context switch (ARM assembly)
-│   ├── mutex.c/h         — mutex with FIFO blocking queue
-│   └── timer.c/h         — software timers
-├── app/
-│   └── main.c            — demo application
-├── linker.ld             — memory layout for MPS2-AN386
-└── Makefile
+│   ├── context.s           SVC startup and PendSV context switching
+│   ├── mutex.c/h           Mutexes
+│   ├── queue.c/h           Fixed-size queues
+│   ├── scheduler.c/h       Priority scheduler and idle task
+│   ├── semaphore.c/h       Counting semaphores
+│   ├── task.c/h            Task control blocks, creation, and delays
+│   └── timer.c/h           Software timers
+├── src/
+│   ├── main.c              Producer/consumer demo using a queue and UART
+│   └── startup.c           Vector table and reset/fault handlers
+│
+├── linker.ld               MPS2-AN386 memory layout
+└── Makefile                ARM cross-compilation build
 ```
 
----
+## Build and run
 
-## API
+### Requirements
 
-### Tasks
+- `arm-none-eabi-gcc` (ARM GNU toolchain)
+- `qemu-system-arm`
+- GNU Make
 
-```c
-// Create a task
-void task_create(task_func_t func, uint32_t priority, uint32_t stack_size);
+On MSYS2 UCRT64, the packages used for these tools are `mingw-w64-ucrt-x86_64-arm-none-eabi-gcc` and `mingw-w64-ucrt-x86_64-qemu-system-arm`.
 
-// Block current task for given number of ticks (yields CPU)
-void task_delay(uint32_t ticks);
-// Block current task until given number of ticks from the last wake (yields CPU)
-void task_delay_until(uint32_t* last_wake_tick, uint32_t ticks);
-```
+Build from the project directory:
 
-### Mutexes
-
-```c
-void mutex_init(mutex_t *mutex);
-void mutex_lock(mutex_t *mutex);    // blocks if mutex is taken
-void mutex_unlock(mutex_t *mutex);  // wakes first task in FIFO queue
-```
-
-### Software Timers
-
-```c
-// Start a timer — returns handle from internal pool
-timer_t *timer_start(uint32_t delay_ticks, bool cyclic, timer_func_t func);
-
-// Stop a timer
-void timer_stop(timer_t *timer);
-```
-
----
-
-## Usage Example
-
-```c
-#include "task.h"
-#include "mutex.h"
-
-static mutex_t uart_mutex;
-
-static void task1_handler(void)
-{
-    while (1)
-    {
-        mutex_lock(&uart_mutex);
-        uart_print("task 1\n");
-        mutex_unlock(&uart_mutex);
-    }
-}
-
-static void task2_handler(void)
-{
-    while (1)
-    {
-        mutex_lock(&uart_mutex);
-        uart_print("task 2\n");
-        mutex_unlock(&uart_mutex);
-    }
-}
-
-void main(void)
-{
-    uart_init();
-    mutex_init(&uart_mutex);
-
-    task_create(task1_handler, 1, 64);
-    task_create(task2_handler, 2, 64);
-
-    scheduler_init();
-    systick_init(1000);  // 1ms tick
-}
-```
-
----
-
-## Building and Running
-
-### Prerequisites
-
-- [MSYS2](https://www.msys2.org/) with UCRT64 terminal
-- ARM GCC toolchain: `pacman -S mingw-w64-ucrt-x86_64-arm-none-eabi-gcc`
-- QEMU: `pacman -S mingw-w64-ucrt-x86_64-qemu-system-arm`
-
-### Build
-
-```bash
+```sh
 make
 ```
 
-### Run in QEMU
+Run the firmware on the MPS2-AN386 model:
 
-```bash
+```sh
 qemu-system-arm \
   -machine mps2-an386 \
   -kernel out/myRTOS.elf \
@@ -188,34 +63,27 @@ qemu-system-arm \
   -serial mon:stdio
 ```
 
+Use `Ctrl-A`, then `X` to exit QEMU's serial monitor.
+
 ### Debug with GDB
 
-```bash
-# Terminal 1 — start QEMU with GDB server
-qemu-system-arm -machine mps2-an386 -kernel out/myRTOS.elf -nographic -serial mon:stdio -s -S
+Start QEMU in one terminal:
 
-# Terminal 2 — connect GDB
-gdb-multiarch out/myRTOS.elf
+```sh
+qemu-system-arm -machine mps2-an386 -kernel out/myRTOS.elf \
+  -nographic -serial mon:stdio -s -S
+```
+
+Connect from another terminal:
+
+```sh
+arm-none-eabi-gdb out/myRTOS.elf
 (gdb) set architecture arm
 (gdb) target remote :1234
 (gdb) break main
 (gdb) continue
 ```
 
----
+## Current limitations
 
-## Known Limitations
-
-- `mutex_lock` is not fully atomic — requires `LDREX/STREX` for production use
-- Maximum tasks: configurable via `MAX_TASKS` in `task.c`
-- Maximum timers: configurable via `MAX_TIMERS` in `timer.c`
-- Single mutex blocked list entry per task (no nested blocking)
-
----
-
-## References
-
-- [ARM Cortex-M System Design Kit TRM (DDI0479)](https://developer.arm.com/documentation/ddi0479/latest)
-- [ARMv7-M Architecture Reference Manual](https://developer.arm.com/documentation/ddi0403/latest/)
-- [Cortex-M4 Technical Reference Manual](https://developer.arm.com/documentation/100166/latest/)
-- [FreeRTOS Kernel](https://www.freertos.org/Documentation/RTOS_book.html) — reference implementation
+The current implementation has fixed task, stack, queue, and timer capacities. A task has only one `next` link for blocking lists, so it cannot safely wait on multiple synchronization objects at once. Synchronization operations do not yet provide full interrupt-safe atomicity, and semaphore wakeup currently assumes the released count is handed to the woken task.
